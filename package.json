@@ -1,0 +1,21 @@
+{
+  "name": "kinesis-exchange-sdk",
+  "version": "0.0.0",
+  "description": "TypeScript SDK for the Kinesis KMS Exchange REST + WebSocket API.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "format:check": "biome format ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
