@@ -1,4 +1,8 @@
 export { KinesisExchangeClient, type KinesisExchangeClientOptions } from './client.js';
+export { KinesisRestClient, type KinesisRestClientOptions } from './rest.js';
+
+export * as marketUtils from './utils/market.js';
+export { pickMidPrice, toNumber } from './utils/market.js';
 
 export {
   AuthError,

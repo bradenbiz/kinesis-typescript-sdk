@@ -13,6 +13,11 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
+    "./rest": {
+      "types": "./dist/rest.d.ts",
+      "import": "./dist/rest.js",
+      "require": "./dist/rest.cjs"
+    },
     "./withdrawal": {
       "types": "./dist/withdrawal.d.ts",
       "import": "./dist/withdrawal.js",
@@ -22,6 +27,8 @@
   "files": ["dist"],
   "scripts": {
     "build": "tsup",
+    "dev": "tsup --watch",
+    "prepare": "npm run build",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
