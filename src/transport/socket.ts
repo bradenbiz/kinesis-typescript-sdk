@@ -2,8 +2,9 @@ import { type ManagerOptions, type Socket, type SocketOptions, io } from 'socket
 import { buildAuthHeaders } from '../auth.js';
 
 export interface SocketClientOptions {
-  publicKey: string;
-  privateKey: string;
+  /** HMAC keys are optional. Public market-data sockets need no auth. */
+  publicKey?: string;
+  privateKey?: string;
   baseUrl: string;
   /** Override the io() factory for testing. */
   ioFactory?: (url: string, opts: Partial<ManagerOptions & SocketOptions>) => Socket;
@@ -18,19 +19,19 @@ export interface SocketHandlers<TInit, TChange> {
 
 export interface SocketSubscription {
   close(): void;
-  /** Last init or change payload received — useful for "what is the latest depth for X" queries. */
+  /** Last init or change payload received — for "what is the latest X" queries. */
   readonly latest: unknown;
 }
 
 export interface OpenSocketArgs {
-  /** socket.io namespace, e.g. '/depth'. */
-  namespace: string;
-  /** Event name emitted by server with initial snapshot. */
-  initEvent: string;
-  /** Event name emitted by server with delta updates. */
-  changeEvent: string;
-  /** Optional event to emit on connect to subscribe to specific pairs. */
-  subscribe?: { event: string; payload: unknown };
+  /** socket.io `path` option, e.g. '/notifications/market-data/v2/depth/'. */
+  path: string;
+  /** Query parameters appended to the handshake URL (e.g. { symbolId: 'KAU_C1USD' }). */
+  query?: Record<string, string>;
+  /** Server-emitted event name carrying the initial snapshot. Defaults to 'onInit'. */
+  initEvent?: string;
+  /** Server-emitted event name carrying delta updates. Defaults to 'onChange'. */
+  changeEvent?: string;
 }
 
 export class SocketClient {
@@ -40,25 +41,34 @@ export class SocketClient {
     args: OpenSocketArgs,
     handlers: SocketHandlers<TInit, TChange>,
   ): SocketSubscription {
-    const headers = buildAuthHeaders({
-      publicKey: this.opts.publicKey,
-      privateKey: this.opts.privateKey,
-      method: 'GET',
-      path: args.namespace,
-    });
+    const initEvent = args.initEvent ?? 'onInit';
+    const changeEvent = args.changeEvent ?? 'onChange';
 
-    const headerRecord = headers as unknown as Record<string, string>;
     const ioOpts: Partial<ManagerOptions & SocketOptions> = {
+      path: args.path,
+      query: args.query,
       transports: ['websocket'],
-      extraHeaders: headerRecord,
-      auth: headerRecord,
       reconnection: true,
       reconnectionDelay: 500,
       reconnectionDelayMax: 5_000,
     };
 
+    // Only attach auth headers when keys are configured. Public market-data
+    // sockets are unauthenticated; attaching dummy headers can cause some
+    // servers to reject the handshake.
+    if (this.opts.publicKey && this.opts.privateKey) {
+      const headers = buildAuthHeaders({
+        publicKey: this.opts.publicKey,
+        privateKey: this.opts.privateKey,
+        method: 'GET',
+        path: args.path,
+      }) as unknown as Record<string, string>;
+      ioOpts.extraHeaders = headers;
+      ioOpts.auth = headers;
+    }
+
     const factory = this.opts.ioFactory ?? io;
-    const socket: Socket = factory(`${this.opts.baseUrl}${args.namespace}`, ioOpts);
+    const socket: Socket = factory(this.opts.baseUrl, ioOpts);
 
     let latest: unknown = undefined;
     let everConnected = false;
@@ -66,17 +76,14 @@ export class SocketClient {
     socket.on('connect', () => {
       if (everConnected) handlers.onReconnect?.();
       everConnected = true;
-      if (args.subscribe) {
-        socket.emit(args.subscribe.event, args.subscribe.payload);
-      }
     });
 
-    socket.on(args.initEvent, (data: TInit) => {
+    socket.on(initEvent, (data: TInit) => {
       latest = data;
       handlers.onInit?.(data);
     });
 
-    socket.on(args.changeEvent, (data: TChange) => {
+    socket.on(changeEvent, (data: TChange) => {
       latest = data;
       handlers.onChange?.(data);
     });

@@ -11,22 +11,20 @@ const kms = new KinesisExchangeClient({
   privateKey: requireEnv('KINESIS_PRIVATE_KEY'),
 });
 
-const sub = kms.sockets.subscribeDepth(['KAU_C1USD', 'KAG_C1USD'], {
+// Depth subscribes one symbol per socket. Open multiple for multiple pairs.
+const sub = kms.sockets.subscribeDepth('KAU_C1USD', {
   onInit: (snapshots) => {
     for (const s of snapshots) {
-      console.log(
-        `Initial depth ${s.symbolId}: bid=${s.depth.bid[0]?.price} ask=${s.depth.ask[0]?.price}`,
-      );
+      console.log(`Initial depth ${s.symbolId}: bid=${s.bid[0]?.price} ask=${s.ask[0]?.price}`);
     }
   },
   onChange: (update) => {
     console.log(
-      `Δ ${update.symbolId} (${update.direction}): top=${update.depth[update.direction][0]?.price}`,
+      `Δ ${update.symbolId} (${update.direction}): top=${update.depth[0]?.price} @ ${update.depth[0]?.amount}`,
     );
   },
   onReconnect: () => console.log('Resubscribed after reconnect'),
   onError: (err) => console.error('Socket error:', err.message),
 });
 
-// Keep the process alive for an hour, then close.
 setTimeout(() => sub.close(), 60 * 60 * 1000);

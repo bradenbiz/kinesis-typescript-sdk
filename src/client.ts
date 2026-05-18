@@ -2,7 +2,6 @@ import { AccountAPI } from './endpoints/account.js';
 import { MarketAPI } from './endpoints/market.js';
 import { OrdersAPI } from './endpoints/orders.js';
 import { type DepthHandlers, subscribeDepth } from './sockets/depth.js';
-import { type MidPriceHandlers, subscribeMidPrice } from './sockets/mid-price.js';
 import { type SnapshotsHandlers, subscribeSnapshots } from './sockets/snapshots.js';
 import { HttpClient } from './transport/http.js';
 import { SocketClient, type SocketSubscription } from './transport/socket.js';
@@ -28,8 +27,7 @@ export class KinesisExchangeClient {
   readonly account: AccountAPI;
   readonly orders: OrdersAPI;
   readonly sockets: {
-    subscribeDepth(pairIds: string[], handlers: DepthHandlers): SocketSubscription;
-    subscribeMidPrice(pairIds: string[], handlers: MidPriceHandlers): SocketSubscription;
+    subscribeDepth(symbolId: string, handlers: DepthHandlers): SocketSubscription;
     subscribeSnapshots(handlers: SnapshotsHandlers): SocketSubscription;
   };
 
@@ -54,18 +52,15 @@ export class KinesisExchangeClient {
       retries,
       fetch: opts.fetch,
     });
-    const sockets = new SocketClient({
-      publicKey: opts.publicKey,
-      privateKey: opts.privateKey,
-      baseUrl,
-    });
+    // Sockets live on the same public market-data host as the unauthenticated
+    // REST endpoints — no HMAC keys passed here.
+    const sockets = new SocketClient({ baseUrl: marketDataBaseUrl });
 
     this.market = new MarketAPI(http, marketDataHttp);
     this.account = new AccountAPI(http);
     this.orders = new OrdersAPI(http);
     this.sockets = {
-      subscribeDepth: (pairIds, handlers) => subscribeDepth(sockets, pairIds, handlers),
-      subscribeMidPrice: (pairIds, handlers) => subscribeMidPrice(sockets, pairIds, handlers),
+      subscribeDepth: (symbolId, handlers) => subscribeDepth(sockets, symbolId, handlers),
       subscribeSnapshots: (handlers) => subscribeSnapshots(sockets, handlers),
     };
   }
