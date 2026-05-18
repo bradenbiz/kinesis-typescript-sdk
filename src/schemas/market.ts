@@ -8,9 +8,12 @@ const numeric = z.union([z.string(), z.number()]);
 
 export const PairSchema = z
   .object({
-    id: z.string(),
+    currencyPairId: z.string(),
     baseCurrency: z.string().optional(),
     quoteCurrency: z.string().optional(),
+    baseDecimals: z.number().optional(),
+    quoteDecimals: z.number().optional(),
+    feeCurrency: z.string().optional(),
   })
   .passthrough();
 
@@ -30,8 +33,10 @@ export const DepthSchema = z
 
 export const MidPriceSchema = z
   .object({
-    symbolId: z.string().optional(),
-    latestMidPrice: numeric.optional(),
+    symbol: z.string(),
+    bid: numeric.optional(),
+    ask: numeric.optional(),
+    mid_price: numeric.optional(),
   })
   .passthrough();
 

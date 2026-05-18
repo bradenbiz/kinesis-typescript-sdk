@@ -19,7 +19,7 @@ function makeMarket(fetchImpl: ReturnType<typeof mockFetch>) {
 describe('MarketAPI', () => {
   it('getPairs hits /v1/exchange/pairs and returns parsed array', async () => {
     const fetchImpl = mockFetch(async () =>
-      jsonResponse(200, [{ id: 'KAU_USD' }, { id: 'KAG_USD' }]),
+      jsonResponse(200, [{ currencyPairId: 'KAU_C1USD' }, { currencyPairId: 'KAG_C1USD' }]),
     );
     const market = makeMarket(fetchImpl);
     const pairs = await market.getPairs();
