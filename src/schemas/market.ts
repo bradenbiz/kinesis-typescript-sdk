@@ -20,14 +20,18 @@ export const PairSchema = z
 export const DepthLevelSchema = z
   .object({
     price: numeric,
-    volume: numeric,
+    amount: numeric,
+    createdAt: z.string().optional(),
   })
   .passthrough();
 
 export const DepthSchema = z
   .object({
-    bid: z.array(DepthLevelSchema).optional(),
-    ask: z.array(DepthLevelSchema).optional(),
+    symbolId: z.string(),
+    depthItems: z.object({
+      bid: z.array(DepthLevelSchema),
+      ask: z.array(DepthLevelSchema),
+    }),
   })
   .passthrough();
 

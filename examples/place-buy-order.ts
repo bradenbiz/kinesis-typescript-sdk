@@ -13,7 +13,7 @@ const kms = new KinesisExchangeClient({
 
 try {
   const order = await kms.orders.buy({
-    currencyPairId: 'KAU_USD',
+    currencyPairId: 'KAU_C1USD',
     receive: 0.5,
     available: 50,
     orderType: 'limit',

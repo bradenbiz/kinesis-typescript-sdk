@@ -11,7 +11,7 @@ const kms = new KinesisExchangeClient({
   privateKey: requireEnv('KINESIS_PRIVATE_KEY'),
 });
 
-const sub = kms.sockets.subscribeDepth(['KAU_USD', 'KAG_USD'], {
+const sub = kms.sockets.subscribeDepth(['KAU_C1USD', 'KAG_C1USD'], {
   onInit: (snapshots) => {
     for (const s of snapshots) {
       console.log(

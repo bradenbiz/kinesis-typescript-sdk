@@ -30,8 +30,8 @@ const kms = new KinesisExchangeClient({
   privateKey: process.env.KINESIS_PRIVATE_KEY!,
 });
 
-const mid = await kms.market.getMidPrice('KAU_USD');
-const depth = await kms.market.getDepth('KAU_USD');
+const mid = await kms.market.getMidPrice('KAU_C1USD');
+const depth = await kms.market.getDepth('KAU_C1USD');
 const holdings = await kms.account.getHoldings();
 ```
 
@@ -42,7 +42,7 @@ The client signs every request with HMAC-SHA256 per Kinesis's documented scheme 
 ```ts
 // Generic form (matches docs exactly)
 await kms.orders.place({
-  currencyPairId: 'KAU_USD',
+  currencyPairId: 'KAU_C1USD',
   direction: 'buy',
   amount: 10,
   orderType: 'limit',
@@ -51,7 +51,7 @@ await kms.orders.place({
 
 // receive/available semantics for buys (Kinesis handles fee math)
 await kms.orders.buy({
-  currencyPairId: 'KAU_USD',
+  currencyPairId: 'KAU_C1USD',
   receive: 5,         // KAU to end up with
   available: 1000,    // max USD to spend
   orderType: 'limit',
@@ -60,7 +60,7 @@ await kms.orders.buy({
 
 // spend semantics for sells
 await kms.orders.sell({
-  currencyPairId: 'KAU_USD',
+  currencyPairId: 'KAU_C1USD',
   spend: 5,
   orderType: 'limit',
   limitPrice: 90.5,
@@ -72,7 +72,7 @@ await kms.orders.cancel(orderId);
 ## Quickstart — WebSocket
 
 ```ts
-const sub = kms.sockets.subscribeDepth(['KAU_USD', 'KAG_USD'], {
+const sub = kms.sockets.subscribeDepth(['KAU_C1USD', 'KAG_C1USD'], {
   onInit: (snapshots) => { /* full state for each subscribed pair */ },
   onChange: (update) => { /* one side of one pair changed */ },
   onReconnect: () => console.log('Resubscribed after disconnect'),

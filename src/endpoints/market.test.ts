@@ -28,14 +28,18 @@ describe('MarketAPI', () => {
   });
 
   it('getDepth includes direction in query when provided', async () => {
-    const fetchImpl = mockFetch(async () => jsonResponse(200, { bid: [], ask: [] }));
+    const fetchImpl = mockFetch(async () =>
+      jsonResponse(200, { symbolId: 'KAU_USD', depthItems: { bid: [], ask: [] } }),
+    );
     const market = makeMarket(fetchImpl);
     await market.getDepth('KAU_USD', 'bid');
     expect(callUrl(fetchImpl)).toBe('https://example.test/v1/exchange/depth/KAU_USD?direction=bid');
   });
 
   it('getDepth omits query when direction not provided', async () => {
-    const fetchImpl = mockFetch(async () => jsonResponse(200, { bid: [], ask: [] }));
+    const fetchImpl = mockFetch(async () =>
+      jsonResponse(200, { symbolId: 'KAU_USD', depthItems: { bid: [], ask: [] } }),
+    );
     const market = makeMarket(fetchImpl);
     await market.getDepth('KAU_USD');
     expect(callUrl(fetchImpl)).toBe('https://example.test/v1/exchange/depth/KAU_USD');
