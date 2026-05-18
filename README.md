@@ -1,6 +1,165 @@
 # kinesis-exchange-sdk
 
-TypeScript SDK for the Kinesis KMS Exchange REST + WebSocket API.
+TypeScript SDK for the **Kinesis Money KMS Exchange** REST + WebSocket API.
 
-**Status: not yet implemented.** This repo is scaffolded; implementation has not begun.
+## Not to be confused with `js-kinesis-sdk`
 
+Kinesis has two API surfaces. This SDK covers the exchange/platform API, **not** the blockchain layer.
+
+| Layer | What it's for | Library |
+|---|---|---|
+| **Blockchain (Horizon)** | Sending KAU between blockchain addresses, ledger history | [`@bullioncapital/js-kinesis-sdk`](https://github.com/bullioncapital/js-kinesis-sdk) |
+| **KMS Exchange / Platform** | Trading, holdings, real-time market data, withdrawals | **this SDK** |
+| **Kinesis Pay** | Merchant payments | (separate; not covered here) |
+
+If what you want is "send KAU from address A to address B," you want `js-kinesis-sdk`. If what you want is "place a buy order on the Kinesis exchange" or "stream live depth," you're in the right place.
+
+## Install
+
+```bash
+npm install kinesis-exchange-sdk
+```
+
+## Quickstart — REST
+
+```ts
+import { KinesisExchangeClient } from 'kinesis-exchange-sdk';
+
+const kms = new KinesisExchangeClient({
+  publicKey: process.env.KINESIS_PUBLIC_KEY!,
+  privateKey: process.env.KINESIS_PRIVATE_KEY!,
+});
+
+const mid = await kms.market.getMidPrice('KAU_USD');
+const depth = await kms.market.getDepth('KAU_USD');
+const holdings = await kms.account.getHoldings();
+```
+
+The client signs every request with HMAC-SHA256 per Kinesis's documented scheme — you pass your keys, signing is invisible.
+
+## Quickstart — Orders
+
+```ts
+// Generic form (matches docs exactly)
+await kms.orders.place({
+  currencyPairId: 'KAU_USD',
+  direction: 'buy',
+  amount: 10,
+  orderType: 'limit',
+  limitPrice: 90.5,
+});
+
+// receive/available semantics for buys (Kinesis handles fee math)
+await kms.orders.buy({
+  currencyPairId: 'KAU_USD',
+  receive: 5,         // KAU to end up with
+  available: 1000,    // max USD to spend
+  orderType: 'limit',
+  limitPrice: 90.5,
+});
+
+// spend semantics for sells
+await kms.orders.sell({
+  currencyPairId: 'KAU_USD',
+  spend: 5,
+  orderType: 'limit',
+  limitPrice: 90.5,
+});
+
+await kms.orders.cancel(orderId);
+```
+
+## Quickstart — WebSocket
+
+```ts
+const sub = kms.sockets.subscribeDepth(['KAU_USD', 'KAG_USD'], {
+  onInit: (snapshots) => { /* full state for each subscribed pair */ },
+  onChange: (update) => { /* one side of one pair changed */ },
+  onReconnect: () => console.log('Resubscribed after disconnect'),
+  onError: (err) => console.error(err),
+});
+
+// Snapshot-on-demand without waiting for next change:
+sub.latest;
+
+sub.close();
+```
+
+The three socket channels (`subscribeDepth`, `subscribeMidPrice`, `subscribeSnapshots`) handle auth, reconnect with exponential backoff, and automatic resubscribe on reconnect.
+
+## Error handling
+
+```ts
+import {
+  KinesisAPIError,
+  AuthError,
+  RateLimitError,
+  PriceValidationError,
+  InsufficientFundsError,
+  SchemaMismatchError,
+} from 'kinesis-exchange-sdk';
+
+try {
+  await kms.orders.buy({ /* ... */ });
+} catch (err) {
+  if (err instanceof PriceValidationError) {
+    // Order rejected for being outside allowed price range (e.g. below floor)
+  } else if (err instanceof AuthError) {
+    // Key revoked or signature bad — stop and alert, don't retry
+  } else if (err instanceof RateLimitError) {
+    // err.retryAfter (seconds) if the server gave a Retry-After header
+  } else if (err instanceof SchemaMismatchError) {
+    // Response shape diverged from the SDK's schemas. Inspect err.raw.
+  }
+}
+```
+
+`AuthError` (401) is **not** retried — the SDK assumes a bad/revoked key is terminal. 5xx and 429 responses retry with exponential backoff up to `retries` (default 3).
+
+## Withdrawal — separate entry point
+
+Withdrawal is deliberately separated from the main client. Consumers that should never have withdrawal capability simply never import `./withdrawal`. The default `KinesisExchangeClient` cannot withdraw funds.
+
+```ts
+import { KinesisWithdrawalClient } from 'kinesis-exchange-sdk/withdrawal';
+
+const withdraw = new KinesisWithdrawalClient({
+  publicKey: process.env.KINESIS_PUBLIC_KEY!,
+  privateKey: process.env.KINESIS_PRIVATE_KEY!,
+});
+
+await withdraw.toAddress({
+  amount: 1.5,
+  currencyCode: 'KAU',
+  address: 'G...',
+  memo: 'optional',
+});
+```
+
+## Configuration
+
+```ts
+new KinesisExchangeClient({
+  publicKey: '...',
+  privateKey: '...',
+  baseUrl: 'https://client-api.kinesis.money',  // default
+  timeout: 10_000,                              // ms, default 10s
+  retries: 3,                                   // default
+  fetch: customFetch,                           // optional override
+});
+```
+
+## License Compliance
+
+This SDK is open source under Apache 2.0. **Use of the Kinesis API is governed by Kinesis's [API License Agreement](https://kinesis.money/about-us/documents/api-license-agreement/)** — your application is subject to it regardless of which client library you use. In particular, note:
+
+- **§2.1** API access is limited to internal business purposes.
+- **§2.3** No sharing of API keys — affects multi-tenant SaaS designs.
+- **§3.8** No replacement of Kinesis's user experience — don't build a competing exchange interface.
+- **§5** Kinesis may change the API at any time; adaptation is your responsibility.
+
+This README is not legal advice. Read the agreement before choosing a deployment model.
+
+## Status
+
+v0.1 work in progress. Schemas are intentionally lenient — unknown response fields pass through and surface as `SchemaMismatchError` only when type expectations are clearly violated. As the SDK is exercised against the live API, schemas will tighten and edge cases will be covered.

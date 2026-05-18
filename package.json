@@ -4,16 +4,38 @@
   "description": "TypeScript SDK for the Kinesis KMS Exchange REST + WebSocket API.",
   "private": true,
   "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./withdrawal": {
+      "types": "./dist/withdrawal.d.ts",
+      "import": "./dist/withdrawal.js",
+      "require": "./dist/withdrawal.cjs"
+    }
+  },
+  "files": ["dist"],
   "scripts": {
     "build": "tsup",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
     "lint": "biome check .",
     "format": "biome format --write .",
     "format:check": "biome format ."
   },
+  "dependencies": {
+    "socket.io-client": "^4.7.5",
+    "zod": "^3.23.8"
+  },
   "devDependencies": {
     "@biomejs/biome": "^1.9.0",
+    "@types/node": "^20.14.0",
     "tsup": "^8.3.0",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"
