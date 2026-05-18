@@ -9,8 +9,10 @@ import {
 } from '../errors.js';
 
 export interface HttpClientOptions {
-  publicKey: string;
-  privateKey: string;
+  // HMAC keys are optional — omit both for unauthenticated endpoints
+  // (e.g. public market-data on fastapi.kinesis.money).
+  publicKey?: string;
+  privateKey?: string;
   baseUrl: string;
   timeout: number;
   retries: number;
@@ -48,15 +50,19 @@ export class HttpClient {
     let attempt = 0;
     while (true) {
       // Regenerate nonce + signature each attempt (server may reject reused nonces).
-      const headers: Record<string, string> = {
-        ...buildAuthHeaders({
-          publicKey: this.opts.publicKey,
-          privateKey: this.opts.privateKey,
-          method: req.method,
-          path,
-          body: bodyStr,
-        }),
-      };
+      const headers: Record<string, string> = {};
+      if (this.opts.publicKey && this.opts.privateKey) {
+        Object.assign(
+          headers,
+          buildAuthHeaders({
+            publicKey: this.opts.publicKey,
+            privateKey: this.opts.privateKey,
+            method: req.method,
+            path,
+            body: bodyStr,
+          }),
+        );
+      }
       if (req.method !== 'DELETE' && bodyStr !== undefined) {
         headers['Content-Type'] = 'application/json';
       }

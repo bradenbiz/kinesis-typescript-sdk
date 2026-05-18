@@ -46,7 +46,17 @@ export const MidPriceSchema = z
 
 export const SnapshotSchema = z
   .object({
-    symbolId: z.string().optional(),
+    symbolId: z.string(),
+    bidPrice: numeric.optional(),
+    askPrice: numeric.optional(),
+    latestMidPrice: numeric.optional(),
+    dailyChange: numeric.optional(),
+    dailyVolume: numeric.optional(),
+    dailyVolumeUsd: numeric.optional(),
+    highestPrice: numeric.optional(),
+    lowestPrice: numeric.optional(),
+    marketCap: numeric.optional(),
+    coinsInCirculation: numeric.optional(),
   })
   .passthrough();
 
@@ -63,7 +73,12 @@ export const OHLCEntrySchema = z
 
 export const PairsResponseSchema = z.array(PairSchema);
 export const SnapshotsResponseSchema = z.array(SnapshotSchema);
-export const OHLCResponseSchema = z.array(OHLCEntrySchema);
+export const OHLCResponseSchema = z
+  .object({
+    ohlcData: z.array(OHLCEntrySchema),
+    olderDataPresent: z.boolean().optional(),
+  })
+  .passthrough();
 
 export type Pair = z.infer<typeof PairSchema>;
 export type DepthLevel = z.infer<typeof DepthLevelSchema>;
