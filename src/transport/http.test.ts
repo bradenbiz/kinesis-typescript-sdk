@@ -20,6 +20,45 @@ function makeClient(
 }
 
 describe('HttpClient', () => {
+  // Cloudflare Workers' V8 isolate throws "Illegal invocation" when fetch is
+  // called with a receiver other than globalThis. The SDK assigns fetch to a
+  // class property and invokes it as `this.fetchImpl(...)`, which made the
+  // call appear to be a method on the HttpClient instance. Binding to
+  // globalThis at construction time prevents this.
+  it('binds fetch to globalThis to survive V8-isolate receiver checks', async () => {
+    let observedThis: unknown = 'not-called';
+    const strictFetch = function (this: unknown, _url: RequestInfo | URL, _init?: RequestInit) {
+      observedThis = this;
+      return Promise.resolve(jsonResponse(200, { ok: true }));
+    } as unknown as typeof fetch;
+    const client = new HttpClient({
+      baseUrl: 'https://example.test',
+      timeout: 1000,
+      retries: 0,
+      fetch: strictFetch,
+    });
+    await client.request({ method: 'GET', path: '/x' });
+    // After bind(globalThis), the fetch receiver should be globalThis,
+    // never the HttpClient instance.
+    expect(observedThis).toBe(globalThis);
+    expect(observedThis).not.toBe(client);
+  });
+
+  it('does not attach HMAC headers when keys are not configured', async () => {
+    const fetchImpl = mockFetch(async () => jsonResponse(200, { ok: true }));
+    const client = new HttpClient({
+      baseUrl: 'https://example.test',
+      timeout: 1000,
+      retries: 0,
+      fetch: fetchImpl as unknown as typeof fetch,
+    });
+    await client.request({ method: 'GET', path: '/public' });
+    const headers = callInit(fetchImpl).headers as Record<string, string>;
+    expect(headers['X-API-Key']).toBeUndefined();
+    expect(headers['X-Nonce']).toBeUndefined();
+    expect(headers['X-Signature']).toBeUndefined();
+  });
+
   it('attaches X-API-Key, X-Nonce, X-Signature on every request', async () => {
     const fetchImpl = mockFetch(async () => jsonResponse(200, { ok: true }));
     const client = makeClient(fetchImpl);

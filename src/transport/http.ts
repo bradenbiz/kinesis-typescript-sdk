@@ -39,7 +39,12 @@ export class HttpClient {
     if (!f) {
       throw new Error('No fetch implementation available; pass `fetch` in options.');
     }
-    this.fetchImpl = f;
+    // Bind to globalThis so calling fetch as a method (`this.fetchImpl(...)`)
+    // doesn't fail in V8 isolates that enforce the receiver — notably
+    // Cloudflare Workers, which throw "Illegal invocation" otherwise. Native
+    // fetch doesn't use `this`; user-supplied fetches that depend on `this`
+    // should be pre-bound by the caller.
+    this.fetchImpl = f.bind(globalThis);
   }
 
   async request<T>(req: RequestOptions<T>): Promise<T> {

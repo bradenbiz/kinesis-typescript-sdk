@@ -10,8 +10,14 @@ const DEFAULT_BASE_URL = 'https://client-api.kinesis.money';
 const DEFAULT_MARKET_DATA_BASE_URL = 'https://fastapi.kinesis.money';
 
 export interface KinesisExchangeClientOptions {
-  publicKey: string;
-  privateKey: string;
+  /**
+   * HMAC keys for authenticated endpoints (trading, orders, account, depth,
+   * mid-price, pairs). Omit both to construct a public-only client that can
+   * still call market-data endpoints and sockets (snapshots, OHLC). Calls
+   * to authenticated endpoints without keys will be rejected by the server.
+   */
+  publicKey?: string;
+  privateKey?: string;
   /** Base URL for HMAC-authenticated trading/account endpoints. */
   baseUrl?: string;
   /** Base URL for unauthenticated public market-data endpoints (snapshots, OHLC). */

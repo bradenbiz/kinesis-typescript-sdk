@@ -37,6 +37,21 @@ const holdings = await kms.account.getHoldings();
 
 The client signs every request with HMAC-SHA256 per Kinesis's documented scheme — you pass your keys, signing is invisible.
 
+### Public-only usage (no keys)
+
+Market-data endpoints (`getAllSnapshots`, `getSnapshot`, `getSnapshotsForCurrency`, `getOHLC`) and the socket channels (`subscribeSnapshots`, `subscribeDepth`) live on a separate unauthenticated host and don't need keys. Omit them entirely:
+
+```ts
+const kms = new KinesisExchangeClient({});
+const snapshots = await kms.market.getAllSnapshots();
+```
+
+Calls to authenticated endpoints (orders, holdings, pairs, mid-price REST, depth REST) without keys will be rejected by the server. The TypeScript surface lets you construct the client without keys; per-call enforcement is on the server.
+
+### Cloudflare Workers / non-Node runtimes
+
+If you're running in a V8-isolate environment (Workers, some edge runtimes), the SDK binds `globalThis.fetch` internally so you don't have to. You can still pass a custom fetch via the `fetch` option if you need a proxied client.
+
 ## Quickstart — Orders
 
 ```ts
