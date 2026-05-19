@@ -5,6 +5,7 @@ export default defineConfig({
     index: 'src/index.ts',
     rest: 'src/rest.ts',
     withdrawal: 'src/withdrawal.ts',
+    pay: 'src/pay/index.ts',
   },
   format: ['esm', 'cjs'],
   dts: true,

@@ -22,6 +22,11 @@
       "types": "./dist/withdrawal.d.ts",
       "import": "./dist/withdrawal.js",
       "require": "./dist/withdrawal.cjs"
+    },
+    "./pay": {
+      "types": "./dist/pay.d.ts",
+      "import": "./dist/pay.js",
+      "require": "./dist/pay.cjs"
     }
   },
   "files": ["dist"],
@@ -32,6 +37,7 @@
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
+    "example:kpay": "node --import tsx --env-file=.env examples/kpay-create-and-poll.ts",
     "lint": "biome check .",
     "format": "biome format --write .",
     "format:check": "biome format ."

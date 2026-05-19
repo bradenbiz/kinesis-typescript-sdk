@@ -131,6 +131,61 @@ try {
 
 `AuthError` (401) is **not** retried — the SDK assumes a bad/revoked key is terminal. 5xx and 429 responses retry with exponential backoff up to `retries` (default 3).
 
+## Kinesis Pay (merchant API) — separate entry point
+
+`kinesis-exchange-sdk/pay` is a client for the Kinesis Pay merchant API — accept KAU/KAG payments from customers via QR scan. It's an entirely different API surface from the exchange client above (different base URL, different keys, no shared response shapes), so it lives at its own subpath. Built on Web Crypto + global `fetch`, so it runs on Cloudflare Workers and any V8-isolate edge runtime without modification.
+
+```ts
+import { KinesisPayClient, KINESIS_PAY_QA_BASE_URL, KINESIS_PAY_QA_KMS_BASE_URL }
+  from 'kinesis-exchange-sdk/pay';
+
+const pay = new KinesisPayClient({
+  publicKey: process.env.KINESIS_PAY_ACCESS_TOKEN!,
+  privateKey: process.env.KINESIS_PAY_SECRET_TOKEN!,
+  merchantId: process.env.KINESIS_PAY_MERCHANT_ID!,
+  // For QA: pass these explicitly. Defaults to production.
+  // baseUrl: KINESIS_PAY_QA_BASE_URL,
+  // kmsBaseUrl: KINESIS_PAY_QA_KMS_BASE_URL,
+});
+
+// 1. Create a payment for $10 USD.
+const payment = await pay.createPayment({ amount: 10, currency: 'USD' });
+
+// 2. Encode getRedirectUrl(paymentId) as a QR code in your UI.
+//    When the customer scans, they go to the Kinesis app to approve.
+const qrUrl = pay.getRedirectUrl(payment.globalPaymentId!);
+
+// 3. Poll until the payment leaves the `created` state. Defaults match the
+//    canonical WC plugin: 10s interval, 10min total. `accepted` is NOT
+//    terminal by default — the customer approving is one step; you still
+//    need to confirm.
+const observed = await pay.pollUntilTerminal(payment.globalPaymentId!, {
+  terminalStatuses: ['accepted', 'rejected', 'expired'],
+});
+
+// 4. If the customer approved, capture the funds. THIS is when money moves.
+if (observed.status === 'accepted') {
+  await pay.confirmPayment({
+    paymentId: payment.globalPaymentId!,
+    orderId: 'your-order-123',
+  });
+}
+```
+
+### Two things to know
+
+- **There are no webhooks.** You must poll. The SDK ships `pollUntilTerminal(paymentId, opts)` with sensible defaults (10s interval, 10min timeout, AbortSignal support).
+- **`accepted` is not captured.** Two-phase: customer approval moves the payment from `created` → `accepted`; `confirmPayment()` moves `accepted` → `processed`. Funds are not transferred until `processed`.
+
+### Auth divergence from the exchange client
+
+The merchant API uses the same HMAC-SHA256 scheme as the exchange API but with two differences the SDK handles for you:
+
+- Body placeholder when no body is sent is the literal string `'{}'`, not the empty string the exchange API uses.
+- Headers are lowercase: `x-api-key`, `x-nonce`, `x-signature`.
+
+The exchange client at `src/auth.ts` uses `node:crypto`, while the Pay client uses Web Crypto. A future refactor could unify them — neither is broken; they grew independently.
+
 ## Withdrawal — separate entry point
 
 Withdrawal is deliberately separated from the main client. Consumers that should never have withdrawal capability simply never import `./withdrawal`. The default `KinesisExchangeClient` cannot withdraw funds.
