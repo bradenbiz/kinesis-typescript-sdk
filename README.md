@@ -155,19 +155,21 @@ const payment = await pay.createPayment({ amount: 10, currency: 'USD' });
 //    When the customer scans, they go to the Kinesis app to approve.
 const qrUrl = pay.getRedirectUrl(payment.globalPaymentId!);
 
-// 3. Poll until the payment leaves the `created` state. Defaults match the
-//    canonical WC plugin: 10s interval, 10min total. `accepted` is NOT
-//    terminal by default — the customer approving is one step; you still
-//    need to confirm.
-const observed = await pay.pollUntilTerminal(payment.globalPaymentId!, {
-  terminalStatuses: ['accepted', 'rejected', 'expired'],
-});
+// 3. Poll until the payment is terminal. Defaults are correct out of the box
+//    — 10s interval, 10min total, terminal = ['processed', 'rejected',
+//    'expired']. Funds move automatically when the customer approves; the
+//    SDK does not have to do anything to make that happen.
+const observed = await pay.pollUntilTerminal(payment.globalPaymentId!);
 
-// 4. If the customer approved, capture the funds. THIS is when money moves.
-if (observed.status === 'accepted') {
+// 4. On success, attach your merchant-internal order identifier to the
+//    payment for reconciliation. confirmPayment does NOT move funds —
+//    the customer's approval did that. This call is optional but
+//    recommended; the orderId persists server-side and shows up on
+//    subsequent getPaymentStatus calls.
+if (observed.status === 'processed') {
   await pay.confirmPayment({
     paymentId: payment.globalPaymentId!,
-    orderId: 'your-order-123',
+    orderId: 'your-internal-order-123',
   });
 }
 ```
@@ -175,7 +177,21 @@ if (observed.status === 'accepted') {
 ### Two things to know
 
 - **There are no webhooks.** You must poll. The SDK ships `pollUntilTerminal(paymentId, opts)` with sensible defaults (10s interval, 10min timeout, AbortSignal support).
-- **`accepted` is not captured.** Two-phase: customer approval moves the payment from `created` → `accepted`; `confirmPayment()` moves `accepted` → `processed`. Funds are not transferred until `processed`.
+- **`confirmPayment` does NOT move funds.** Funds move automatically when the customer approves in their Kinesis app — the status transitions `created → processed` directly. `confirmPayment` attaches your merchant-internal `orderId` to the payment record for reconciliation; it can be called any time after `processed`. Calling with a different `orderId` overwrites.
+
+### Local development with `npm link`
+
+If you're consuming this SDK from a project that's part of an npm workspace, `npm link` only takes when run from the workspace root with `--workspace`:
+
+```sh
+# Wrong — silently no-ops from inside a workspace child:
+cd apps/adapter && npm link kinesis-exchange-sdk
+
+# Right — run from the workspace root:
+npm link kinesis-exchange-sdk --workspace=apps/adapter
+```
+
+The symlink lands in the root `node_modules/` (hoisted), which is what Node's resolver expects.
 
 ### Auth divergence from the exchange client
 

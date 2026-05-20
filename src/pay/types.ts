@@ -32,25 +32,43 @@ export interface Payment {
   globalPaymentId?: string;
   /** Some endpoints return paymentId alongside or instead of globalPaymentId. */
   paymentId?: string;
-  /** Merchant-side order identifier passed to confirmPayment. */
+  /** The merchantId from the client config, echoed back. */
+  globalMerchantId?: string;
+  /**
+   * The merchant-internal identifier attached via confirmPayment, if any.
+   * Persists server-side and appears on subsequent getPaymentStatus responses.
+   */
   orderId?: string;
+  /** Merchant business name. */
+  businessName?: string;
+  /**
+   * Merchant business name, same as `businessName` in the responses observed.
+   * May differ for marketplace / sub-merchant scenarios (unverified).
+   */
+  merchantBusinessName?: string;
   paymentCurrency?: string;
   paymentCurrencyAmount?: number | string;
-  paymentCurrencyFee?: number | string;
+  /**
+   * Merchant fee in payment currency. Observed as `null` in production —
+   * consistent with Kinesis's zero-merchant-fee model. Will likely remain
+   * null unless that model changes.
+   */
+  paymentCurrencyFee?: number | string | null;
   paymentCurrencyNetAmount?: number | string;
+  /** USD equivalent of the payment amount; observed as a number in production. */
   usdConvertedAmount?: number | string;
   preferredCurrency?: string;
   preferredCurrencyAmount?: number | string;
   createdAt?: string;
   updatedAt?: string;
-  /** ISO timestamp at which `created` transitions to `expired`. */
+  /** ISO timestamp at which `created` transitions to `expired` (10 min after `createdAt`). */
   expiryAt?: string;
   fromAddress?: string;
   toAddress?: string;
   transactionHash?: string;
-  // TODO: verify against live API — fields above are derived from the WC
-  // plugin's SQL columns, not from public docs. Some fields may be present
-  // only on certain endpoints / statuses.
+  // The fields above cover what's observed on the live API as of 2026-05-19.
+  // The index signature catches anything else without crashing — surface
+  // additions via getPaymentStatus and add them to this interface.
   [k: string]: unknown;
 }
 

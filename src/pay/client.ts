@@ -40,13 +40,11 @@ export interface PollOptions {
   /**
    * Statuses that complete polling. Defaults to ['processed', 'rejected', 'expired'].
    *
-   * Note: 'accepted' is intentionally NOT terminal by default — at `accepted`,
-   * the customer has approved but the merchant has not yet captured. The
-   * typical flow is to poll-until-terminal, see `accepted`, call
-   * confirmPayment(), then optionally poll again to wait for `processed`.
-   *
-   * Pass `['accepted', 'processed', 'rejected', 'expired']` if you want the
-   * single-poll-then-confirm flow.
+   * Note: `accepted` is in the PaymentStatus union for safety (the WC plugin
+   * handles it defensively in its JS) but is not observed as a stable state
+   * on the live API as of 2026-05 — payments transition `created → processed`
+   * directly on customer approval. Including `accepted` in terminalStatuses
+   * is rarely useful in practice.
    */
   terminalStatuses?: ReadonlyArray<PaymentStatus>;
 }
@@ -61,10 +59,10 @@ export interface PollOptions {
  * **There are no webhooks.** Status changes are observed by polling. Defaults
  * (10s interval, 10min total) match the WC plugin.
  *
- * **`accepted` does not mean money has moved.** Two-phase capture: the
- * customer approval transitions `created → accepted`; the merchant must call
- * `confirmPayment` to move `accepted → processed`. Funds are not captured
- * until `processed`.
+ * **Funds move automatically on customer approval.** The status transitions
+ * `created → processed` directly when the customer approves in their Kinesis
+ * app. `confirmPayment()` does NOT move funds — it attaches a merchant-side
+ * `orderId` to the payment record for reconciliation. See its JSDoc.
  */
 export class KinesisPayClient {
   private readonly http: PayHttpClient;
@@ -115,9 +113,19 @@ export class KinesisPayClient {
   }
 
   /**
-   * Merchant-side capture. Transitions `accepted → processed`. Call only
-   * after observing `accepted` via polling (or via your own out-of-band
-   * signal). Funds are not captured until this returns successfully.
+   * Attach a merchant-internal `orderId` to a Kinesis payment for
+   * reconciliation. The orderId persists server-side and appears in
+   * subsequent {@link getPaymentStatus} responses.
+   *
+   * **Does NOT move funds.** Funds move automatically when the customer
+   * approves in their Kinesis app — the status transitions `created →
+   * processed` at that point, before this method is called. `confirmPayment`
+   * is independent of fund movement and is typically called once after
+   * observing `processed`.
+   *
+   * Calling with a different `orderId` on a payment that already has one
+   * appears to overwrite (not append) — call exactly once per payment with
+   * your authoritative identifier.
    */
   confirmPayment(input: ConfirmPaymentInput): Promise<Payment> {
     return this.http.request<Payment>({
@@ -132,7 +140,11 @@ export class KinesisPayClient {
 
   /**
    * Validate the configured credentials and merchantId. Throws
-   * KinesisPayAuthError on 403. Useful as a startup health check.
+   * {@link KinesisPayAuthError} on 403.
+   *
+   * Returns `undefined` on success — the API responds with an empty body and
+   * the SDK passes that through. Treat a non-throwing call as "creds work";
+   * do not test the return value as truthy.
    */
   handshake(): Promise<unknown> {
     return this.http.request({

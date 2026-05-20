@@ -47,17 +47,21 @@ console.log('Customer redirect URL (encode as QR):', pay.getRedirectUrl(paymentI
 // the example doesn't block CI for 10 minutes.
 console.log('Polling for up to 90s...');
 try {
+  // Defaults are correct (['processed', 'rejected', 'expired']); we just
+  // shorten the interval/timeout here so the demo doesn't block for 10 min.
   const observed = await pay.pollUntilTerminal(paymentId, {
     intervalMs: 5_000,
     timeoutMs: 90_000,
-    terminalStatuses: ['accepted', 'rejected', 'expired'],
     onUpdate: (p) => console.log('  →', p.status),
   });
   console.log('Final status:', observed.status);
 
-  if (observed.status === 'accepted') {
-    const captured = await pay.confirmPayment({ paymentId, orderId: 'example-order' });
-    console.log('Confirmed. Status:', captured.status);
+  if (observed.status === 'processed') {
+    // Funds have already moved (the customer approved in their Kinesis app).
+    // Attach our internal order identifier for reconciliation. This does NOT
+    // move funds — it persists the orderId server-side.
+    const reconciled = await pay.confirmPayment({ paymentId, orderId: 'example-order' });
+    console.log('Attached orderId. Server-stored orderId:', reconciled.orderId);
   }
 } catch (err) {
   if (err instanceof Error && err.name === 'KinesisPayTimeoutError') {
