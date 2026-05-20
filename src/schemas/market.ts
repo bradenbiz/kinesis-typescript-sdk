@@ -86,3 +86,4 @@ export type Depth = z.infer<typeof DepthSchema>;
 export type MidPrice = z.infer<typeof MidPriceSchema>;
 export type Snapshot = z.infer<typeof SnapshotSchema>;
 export type OHLCEntry = z.infer<typeof OHLCEntrySchema>;
+export type OHLCResponse = z.infer<typeof OHLCResponseSchema>;

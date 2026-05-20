@@ -22,6 +22,23 @@ export type {
 } from './endpoints/orders.js';
 export type { OHLCTimeFrame } from './endpoints/market.js';
 
+// REST response types. Note that DepthLevel here means the REST-shape variant
+// (carries `createdAt`). The socket variant — with `ownedAmount` — is named
+// `DepthLevel` inside `sockets/depth.ts` and is re-exported below alongside
+// the other socket types; to avoid collision, the schema DepthLevel is NOT
+// re-exported from this entry. If you need it, deep-import from
+// `kinesis-exchange-sdk/rest`.
+export type {
+  Depth,
+  MidPrice,
+  OHLCEntry,
+  OHLCResponse,
+  Pair,
+  Snapshot,
+} from './schemas/market.js';
+export type { Holding, Holdings, Statement } from './schemas/account.js';
+export type { Amendment, Order } from './schemas/orders.js';
+
 export type { DepthHandlers, DepthLevel, DepthSnapshot, DepthUpdate } from './sockets/depth.js';
 export type {
   SnapshotPayload,

@@ -80,5 +80,21 @@ export type {
   SellInput,
 } from './endpoints/orders.js';
 export type { OHLCTimeFrame } from './endpoints/market.js';
+
+// REST response types. All zero-runtime — they erase at compile time, so
+// re-exporting here doesn't pull anything new into the /rest bundle. Lets
+// consumers type their parameters without redefining structural shapes.
+export type {
+  Depth,
+  DepthLevel,
+  MidPrice,
+  OHLCEntry,
+  OHLCResponse,
+  Pair,
+  Snapshot,
+} from './schemas/market.js';
+export type { Holding, Holdings, Statement } from './schemas/account.js';
+export type { Amendment, Order } from './schemas/orders.js';
+
 export * as marketUtils from './utils/market.js';
 export { pickMidPrice, toNumber } from './utils/market.js';
