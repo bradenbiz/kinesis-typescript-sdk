@@ -16,9 +16,23 @@ If what you want is "send KAU from address A to address B," you want `js-kinesis
 
 ## Install
 
+The SDK is not on npm (yet). Install directly from the GitHub repo, pinning
+to a release tag:
+
 ```bash
-npm install kinesis-exchange-sdk
+npm install github:bradenbiz/kinesis-typescript-sdk#v0.1.0
 ```
+
+In your `package.json`:
+
+```json
+"dependencies": {
+  "kinesis-exchange-sdk": "github:bradenbiz/kinesis-typescript-sdk#v0.1.0"
+}
+```
+
+The `prepare` script runs `npm run build` on install, so `dist/` is always
+fresh — no extra build step on the consumer side.
 
 ## Quickstart — REST
 
@@ -237,7 +251,7 @@ new KinesisExchangeClient({
 
 ## License Compliance
 
-This SDK is open source under Apache 2.0. **Use of the Kinesis API is governed by Kinesis's [API License Agreement](https://kinesis.money/about-us/documents/api-license-agreement/)** — your application is subject to it regardless of which client library you use. In particular, note:
+This SDK is open source under the MIT License (see [LICENSE](LICENSE)). **Use of the Kinesis API is governed by Kinesis's [API License Agreement](https://kinesis.money/about-us/documents/api-license-agreement/)** — your application is subject to it regardless of which client library you use. In particular, note:
 
 - **§2.1** API access is limited to internal business purposes.
 - **§2.3** No sharing of API keys — affects multi-tenant SaaS designs.

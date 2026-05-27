@@ -1,8 +1,13 @@
 {
   "name": "kinesis-exchange-sdk",
-  "version": "0.0.0",
-  "description": "TypeScript SDK for the Kinesis KMS Exchange REST + WebSocket API.",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for the Kinesis KMS Exchange REST + WebSocket API, plus the Kinesis Pay merchant API.",
   "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bradenbiz/kinesis-typescript-sdk.git"
+  },
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
