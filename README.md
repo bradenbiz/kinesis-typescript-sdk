@@ -1,18 +1,18 @@
 # kinesis-exchange-sdk
 
-TypeScript SDK for the **Kinesis Money KMS Exchange** REST + WebSocket API.
+TypeScript SDK for the **Kinesis Money KMS Exchange** REST + WebSocket API, plus the **Kinesis Pay** merchant API.
 
 ## Not to be confused with `js-kinesis-sdk`
 
-Kinesis has two API surfaces. This SDK covers the exchange/platform API, **not** the blockchain layer.
+Kinesis has three API surfaces. This SDK covers two of them — the exchange/platform API and the Pay merchant API — but **not** the blockchain layer.
 
 | Layer | What it's for | Library |
 |---|---|---|
 | **Blockchain (Horizon)** | Sending KAU between blockchain addresses, ledger history | [`@bullioncapital/js-kinesis-sdk`](https://github.com/bullioncapital/js-kinesis-sdk) |
-| **KMS Exchange / Platform** | Trading, holdings, real-time market data, withdrawals | **this SDK** |
-| **Kinesis Pay** | Merchant payments | (separate; not covered here) |
+| **KMS Exchange / Platform** | Trading, holdings, real-time market data, withdrawals | **this SDK** (default entry, `/rest`, `/withdrawal`) |
+| **Kinesis Pay** | Merchant payments (customer QR scan → merchant capture) | **this SDK** (`/pay` subpath) |
 
-If what you want is "send KAU from address A to address B," you want `js-kinesis-sdk`. If what you want is "place a buy order on the Kinesis exchange" or "stream live depth," you're in the right place.
+If what you want is "send KAU from address A to address B," you want `js-kinesis-sdk`. If what you want is "place a buy order," "stream live depth," or "accept KAU/KAG as a merchant," you're in the right place.
 
 ## Install
 
